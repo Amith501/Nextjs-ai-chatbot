@@ -6,21 +6,19 @@ const groq = new Groq({
 
 export async function POST(req: Request) {
   try {
-    const { prompt } = await req.json();
-
- const completion = await groq.chat.completions.create({
-  model: "llama-3.1-8b-instant",
-  messages: [{ role: "user", content: prompt }],
-  max_completion_tokens:150
-});
-    return Response.json({
-      response: completion.choices[0].message.content,
+    const { text, type } = await req.json();
+    const prompt = `summarize the following text in  ${
+      type === "bullets" ? "bulletpoints" : "a short paragraph"
+    }"${text}" `;
+    const response = await groq.chat.completions.create({
+      model: "llama-3.1-8b-instant",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 300,
     });
-  } catch (error: any) {
-    console.error("Groq API Error:", error);
-    return Response.json(
-      { response: "AI request failed", error: error.message },
-      { status: 400 }
-    );
+    const summary = response.choices[0].message.content?.trim();
+    return Response.json({ summary }, { status: 200 });
+  } catch (error) {
+    console.log(error);
+    return Response.json({ error: "something went wrong" });
   }
 }
