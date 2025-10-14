@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ai summary",
+  title: "Ai summary",
   description: "Ai text summary with next js ",
 };
 
