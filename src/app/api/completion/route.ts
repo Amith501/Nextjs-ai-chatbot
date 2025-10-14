@@ -1,14 +1,14 @@
 import Groq from "groq-sdk";
 
 const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY!,
+  apiKey: process.env.GROQ_API_KEY!, // keep non-null assertion if you are sure env exists
 });
 
 export async function POST(req: Request) {
   try {
-    const { text, type } = await req.json();
+    const { text, type }: { text: string; type: string } = await req.json();
 
-    if (!text) {
+    if (!text.trim()) {
       return Response.json({ error: "Text is required" }, { status: 400 });
     }
 
@@ -28,11 +28,20 @@ export async function POST(req: Request) {
       "No summary generated";
 
     return Response.json({ summary }, { status: 200 });
-  } catch (error: any) {
-    console.error("Error in summary API:", error);
+  } catch (error: unknown) {
+    // Safely handle unknown errors
+    let message = "Something went wrong while summarizing";
+
+    if (error instanceof Error) {
+      message = error.message;
+    }
+
+    console.error("Error in summary API:", message);
+
     return Response.json(
-      { error: "Something went wrong while summarizing" },
+      { error: message },
       { status: 500 }
     );
   }
 }
+
