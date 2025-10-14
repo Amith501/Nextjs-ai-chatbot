@@ -1,33 +1,42 @@
 import Groq from "groq-sdk";
 
 const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
+  apiKey: process.env.GROQ_API_KEY || "", // fallback if env not set
 });
 
 export async function POST(req: Request) {
   try {
-    const { prompt } = await req.json();
+    const { text, type }: { text: string; type: string } = await req.json();
 
- const completion = await groq.chat.completions.create({
-  model: "llama-3.1-8b-instant",
-  messages: [{ role: "user", content: prompt }],
-  max_completion_tokens:150
-});
-    return Response.json({
-      response: completion.choices[0].message.content,
+    if (!text.trim()) {
+      return Response.json({ error: "Text is required" }, { status: 400 });
+    }
+
+    const prompt = `Summarize the following text in ${
+      type === "bullets" ? "bullet points" : "a short paragraph"
+    }:\n\n"${text}"`;
+
+    const response = await groq.chat.completions.create({
+      model: "llama-3.1-8b-instant",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 300,
+      temperature: 0.7,
     });
+
+    const summary =
+      response?.choices?.[0]?.message?.content?.trim() ||
+      "No summary generated";
+
+    return Response.json({ summary }, { status: 200 });
   } catch (error: unknown) {
-  let message = "AI request failed";
+    let message = "Something went wrong while summarizing";
 
-  if (error instanceof Error) {
-    message = error.message;
+    if (error instanceof Error) {
+      message = error.message;
+    }
+
+    console.error("Error in summary API:", message);
+
+    return Response.json({ error: message }, { status: 500 });
   }
-
-  console.error("Groq API Error:", message);
-
-  return Response.json(
-    { response: "AI request failed", error: message },
-    { status: 400 }
-  );
-
 }
