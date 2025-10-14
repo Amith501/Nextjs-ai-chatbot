@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     return Response.json({
       response: completion.choices[0].message.content,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Groq API Error:", error);
     return Response.json(
       { response: "AI request failed", error: error.message },
