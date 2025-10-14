@@ -17,10 +17,17 @@ export async function POST(req: Request) {
       response: completion.choices[0].message.content,
     });
   } catch (error: unknown) {
-    console.error("Groq API Error:", error);
-    return Response.json(
-      { response: "AI request failed", error: error.message },
-      { status: 400 }
-    );
+  let message = "AI request failed";
+
+  if (error instanceof Error) {
+    message = error.message;
   }
+
+  console.error("Groq API Error:", message);
+
+  return Response.json(
+    { response: "AI request failed", error: message },
+    { status: 400 }
+  );
+
 }
