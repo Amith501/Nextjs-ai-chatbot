@@ -28,11 +28,15 @@ export async function POST(req: Request) {
       "No summary generated";
 
     return Response.json({ summary }, { status: 200 });
-  } catch (error: any) {
-    console.error("Error in summary API:", error);
-    return Response.json(
-      { error: "Something went wrong while summarizing" },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    let message = "Something went wrong while summarizing";
+
+    if (error instanceof Error) {
+      message = error.message;
+    }
+
+    console.error("Error in summary API:", message);
+
+    return Response.json({ error: message }, { status: 500 });
   }
 }
