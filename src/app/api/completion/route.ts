@@ -1,14 +1,14 @@
 import Groq from "groq-sdk";
 
 const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY!,
+  apiKey: process.env.GROQ_API_KEY!, // keep non-null assertion if you are sure env exists
 });
 
 export async function POST(req: Request) {
   try {
-    const { text, type } = await req.json();
+    const { text, type }: { text: string; type: string } = await req.json();
 
-    if (!text) {
+    if (!text.trim()) {
       return Response.json({ error: "Text is required" }, { status: 400 });
     }
 
@@ -40,3 +40,4 @@ export async function POST(req: Request) {
     return Response.json({ error: message }, { status: 500 });
   }
 }
+
