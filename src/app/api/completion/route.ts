@@ -1,43 +1,53 @@
 import Groq from "groq-sdk";
 
 const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY!, // keep non-null assertion if you are sure env exists
+  apiKey: process.env.GROQ_API_KEY!,
 });
 
 export async function POST(req: Request) {
   try {
-    const { text, type }: { text: string; type: string } = await req.json();
+    const { prompt } = await req.json();
 
-    if (!text.trim()) {
-      return Response.json({ error: "Text is required" }, { status: 400 });
+    if (!prompt || typeof prompt !== "string") {
+      return Response.json({ error: "Prompt is required" }, { status: 400 });
     }
 
-    const prompt = `Summarize the following text in ${
-      type === "bullets" ? "bullet points" : "a short paragraph"
-    }:\n\n"${text}"`;
-
-    const response = await groq.chat.completions.create({
+    const completion = await groq.chat.completions.create({
       model: "llama-3.1-8b-instant",
-      messages: [{ role: "user", content: prompt }],
-      max_tokens: 300,
+      messages: [
+        { role: "system", content: "You are a helpful AI assistant." },
+        { role: "user", content: prompt },
+      ],
       temperature: 0.7,
     });
 
-    const summary =
-      response?.choices?.[0]?.message?.content?.trim() ||
-      "No summary generated";
-
-    return Response.json({ summary }, { status: 200 });
+    const reply = completion.choices[0]?.message?.content ?? "No response.";
+    return Response.json({ response: reply });
   } catch (error: unknown) {
-    let message = "Something went wrong while summarizing";
-
     if (error instanceof Error) {
-      message = error.message;
+      console.error("AI Error:", error.message);
+    } else {
+      console.error("AI Error:", error);
     }
 
-    console.error("Error in summary API:", message);
-
-    return Response.json({ error: message }, { status: 500 });
+    return Response.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
+// to get the updaed content
+//  const completion = await groq.chat.completions.create({
+//       model: "llama-3.1-8b-instant",
+//       messages: [
+//         {
+//           role: "system",
+//           content: `
+// You are a concise, up-to-date AI assistant.
+// - Always give short, factual, and current answers.
+// - If you are unsure or the question refers to a future product (e.g., iPhone 17), respond that it's not released yet.
+// - Avoid rumors, outdated information, and long paragraphs.
+// - Keep answers under 5 sentences.`,
+//         },
+//         { role: "user", content: prompt },
+//       ],
+//       temperature: 0.4, // lower = more factual and consistent
+//     });

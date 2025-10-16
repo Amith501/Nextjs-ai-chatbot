@@ -1,94 +1,81 @@
 "use client";
 
-import { useState } from "react";
+import { useState, ChangeEvent } from "react";
 
 export default function Home() {
-  
+  const [prompt, setPrompt] = useState<string>("");
+  const [response, setResponse] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
-  const [type, setType] = useState<string>("paragraph");
-  const [summary, setSummary] = useState<string>("");
-  const [text, setText] = useState<string>("");
+  const [copied, setCopied] = useState<boolean>(false);
 
-  const submitHandler = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!text.trim()) {
-      alert("Please enter some text to summarize.");
-      return;
-    }
-
-    setLoading(true);
-    setSummary("");
-
+  const handleAsk = async (): Promise<void> => {
     try {
-
-      const response = await fetch("/api/completion", {
+      setLoading(true);
+      const res = await fetch("/api/completion", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, type }),
+        body: JSON.stringify({ prompt }),
       });
 
-      const data = await response.json();
-
-      if (data.summary) {
-        setSummary(data.summary);
-      } else {
-        alert(data.error || "Something went wrong");
+      if (!res.ok) {
+        throw new Error("Failed to fetch AI response");
       }
-    } catch (err) {
-      console.error("Error:", err);
-      alert("Error generating summary");
+
+      const data: { response: string } = await res.json();
+      setResponse(data.response);
+      setCopied(false); // reset copy status
+    } catch (error) {
+      console.error("Error:", error);
+      setResponse("⚠️ Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
+  const handleChange = (e: ChangeEvent<HTMLTextAreaElement>): void => {
+    setPrompt(e.target.value);
+  };
+
+  const handleCopy = () => {
+    if (!response) return;
+    navigator.clipboard.writeText(response);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000); // reset after 2s
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <div className="max-w-xl w-full bg-white rounded-xl shadow-lg p-6">
-        <h1 className="text-2xl font-bold text-center mb-6">
-          🧠 AI Text Summarizer
-        </h1>
+    <div className="flex flex-col items-center p-10 space-y-4">
+      <h1 className="text-2xl font-bold">💬 AI Chat with Next.js (TypeScript)</h1>
 
-        <form onSubmit={submitHandler} className="flex flex-col gap-4">
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Enter text to summarize..."
-            className="border p-3 rounded-lg h-40 focus:ring-2 focus:ring-blue-500 resize-none"
-          />
+      <textarea
+        className="border p-2 w-100 rounded-xl shadow-md"
+        rows={4}
+        value={prompt}
+        onChange={handleChange}
+        placeholder="Ask me anything..."
+      />
 
-          <select
-            value={type}
-            onChange={(e) => setType(e.target.value)}
-            className="border p-2 rounded-lg focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="bullets">Bullet Points</option>
-            <option value="paragraph">Short Paragraph</option>
-          </select>
+      <button
+        onClick={handleAsk}
+        disabled={loading || !prompt.trim()}
+        className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:opacity-50"
+      >
+        {loading ? "Thinking..." : "Ask AI"}
+      </button>
+
+      {response && (
+        <div className="border p-4 w-200 shadow-md bg-gray-50 rounded-xl relative">
+          <strong>Response:</strong>
+          <p className="mt-2 whitespace-pre-line">{response}</p>
 
           <button
-            type="submit"
-            disabled={loading}
-            className="bg-blue-600  text-white py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+            onClick={handleCopy}
+            className="absolute top-2 right-2 bg-gray-200 px-2 py-1 rounded hover:bg-gray-300 text-sm"
           >
-            {loading ? "Summarizing..." : "Submit"}
+            {copied ? "Copied!" : "Copy"}
           </button>
-        </form>
-
-        {loading && (
-          <div className="flex justify-center mt-4">
-            <div className="w-6 h-6 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-          </div>
-        )}
-
-        {summary && (
-          <div className="mt-6 bg-gray-100 p-4 rounded-lg">
-            <h2 className="text-xl font-semibold mb-2">Summary:</h2>
-            <p className="text-gray-800 whitespace-pre-wrap">{summary}</p>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
